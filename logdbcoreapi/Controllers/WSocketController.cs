@@ -53,7 +53,7 @@ namespace logdbcoreapi.Controllers
                     _logger.LogInformation(fname);
                   
                     WebSocket webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
-                    ClientList.AddUser(webSocket);
+                    //ClientList.AddUser(webSocket);
                     //_socket.CreateSocket(HttpContext);
                   await  _socket.ReceiveDataAsyncNew(webSocket, new CancellationToken(false));
                     //_socket.SendDataAsync("I am longdb", webSocket);
