@@ -51,7 +51,7 @@ namespace logdbcoreapi.Utlis
         {
             string oldmsg = "";
             WebSocketReceiveResult result;
-
+            int cnt = ClientList.clist.Count;
             do
             {
                 var ms = new MemoryStream();
@@ -78,6 +78,61 @@ namespace logdbcoreapi.Utlis
 
             return "";
         }
+
+        /// <summary>
+        /// 接收客户端数据.websocket 从ClientList类里拿。
+        /// </summary>
+        /// <param name="webSocket">webSocket 对象</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public async Task<string> ReceiveDataAsyncNew(WebSocket webSocket, CancellationToken cancellationToken)
+        {
+            string oldmsg = "";
+            WebSocketReceiveResult result;
+            //WebSocket webSocket = ClientList.clist[0];
+            if (webSocket.State != WebSocketState.Open)
+            {
+                return "isnull";
+            }
+
+            while(!webSocket.CloseStatus.HasValue)
+            {
+                var buffer = new ArraySegment<byte>(new byte[1024 * 2]);
+                result = await webSocket.ReceiveAsync(buffer, cancellationToken);
+                if ("Close".Equals(result.MessageType.ToString()))
+                {
+                    break;
+                }
+                if (result.Count > 0)
+                {
+
+                    using (MemoryStream ms = new MemoryStream())
+                    {
+                        ms.Write(buffer.Array, buffer.Offset, result.Count - buffer.Offset);
+                        ms.Seek(0, SeekOrigin.Begin);
+                        var reader = new StreamReader(ms);
+                        var message = reader.ReadToEnd();
+                        reader.Dispose();
+
+                        byte[] newbuf = Encoding.UTF8.GetBytes(message);//过度下，按实际大小返回给客户端。
+                        var segment = new ArraySegment<byte>(newbuf);
+
+                        List<Task> tasks = new List<Task>();
+                        ClientList.clist.ForEach(ws =>
+                        {
+                            tasks.Add(ws.SendAsync(segment, result.MessageType, result.EndOfMessage, CancellationToken.None));
+                        });
+                        Task.WaitAll(tasks.ToArray());
+                    }
+                }
+            }
+            //移除集合中的websocket
+            ClientList.RemoveUser(ClientList.clist.Where(ws => ws == webSocket).FirstOrDefault());
+            //关闭当前异常连接。
+            await webSocket.CloseAsync(webSocket.CloseStatus.Value, webSocket.CloseStatusDescription, CancellationToken.None);
+            return "isnull";
+        }
+
         /// <summary>
         /// 向客户端发送数据 
         /// </summary>

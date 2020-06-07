@@ -12,6 +12,7 @@ namespace logdbcoreapi.Utlis
     {
         Task CreateSocket(HttpContext httpContext);
         Task<string> ReceiveDataAsync(WebSocket webSocket, CancellationToken cancellationToken);
+        Task<string> ReceiveDataAsyncNew(WebSocket webSocket, CancellationToken cancellationToken);
         Task SendDataAsync(string msg, WebSocket webSocket);
     }
 }

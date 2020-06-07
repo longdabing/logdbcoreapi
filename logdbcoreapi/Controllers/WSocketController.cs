@@ -44,13 +44,21 @@ namespace logdbcoreapi.Controllers
         //}
 
         [HttpGet]
-        public async Task GetAsync()
+        public async Task GetAsync(string fname)
         {
-            WebSocket webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
-
-            //_socket.CreateSocket(HttpContext);
-            _socket.ReceiveDataAsync(webSocket, new CancellationToken(false));
-            _socket.SendDataAsync("I am longdb", webSocket);
+            //if ("/ws".Equals(HttpContext.Request.Path.Value))//判断是不是websocket请求地址。
+            {
+                if (HttpContext.WebSockets.IsWebSocketRequest)//判断是不是websocket请求。
+                {
+                    _logger.LogInformation(fname);
+                  
+                    WebSocket webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
+                    ClientList.AddUser(webSocket);
+                    //_socket.CreateSocket(HttpContext);
+                  await  _socket.ReceiveDataAsyncNew(webSocket, new CancellationToken(false));
+                    //_socket.SendDataAsync("I am longdb", webSocket);
+                }
+            }
         }
     }
 }
