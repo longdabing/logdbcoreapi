@@ -12,6 +12,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using logdbcoreapi.Model;
+using System.Text.Json;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace logdbcoreapi.Utlis
 {
@@ -105,6 +107,18 @@ namespace logdbcoreapi.Utlis
                 if (result.Count > 0)
                 {
                     msg = JsonConvert.DeserializeObject<MessegeModel>(Encoding.Default.GetString(buffer));
+                    //try
+                    //{
+                    //    var options = new JsonSerializerOptions
+                    //    {
+                    //        AllowTrailingCommas = true
+                    //    };
+                    //    msg = JsonSerializer.Deserialize<MessegeModel>(Encoding.Default.GetString(buffer), options);
+                    //}
+                    //catch (Exception ex)
+                    //{ 
+                    //}
+
                     if (msg == null)
                     {
                         break;
