@@ -90,7 +90,7 @@ namespace logdbcoreapi.Utlis
         public async Task<string> ReceiveDataAsyncNew(WebSocket webSocket, CancellationToken cancellationToken)
         {
             WebSocketReceiveResult result;
-            MessegeModel msg = null;
+            MessageModel msg = null;
             if (webSocket.State != WebSocketState.Open)
             {
                 return "";
@@ -106,7 +106,7 @@ namespace logdbcoreapi.Utlis
                 }
                 if (result.Count > 0)
                 {
-                    msg = JsonConvert.DeserializeObject<MessegeModel>(Encoding.Default.GetString(buffer));
+                    msg = JsonConvert.DeserializeObject<MessageModel>(Encoding.Default.GetString(buffer));
                     //try
                     //{
                     //    var options = new JsonSerializerOptions

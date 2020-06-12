@@ -63,11 +63,31 @@ namespace logdbcoreapi.Utlis
                 clist.Clear();
             }
         }
-
+        /// <summary>
+        /// 每次新增时，先检测下这个这个聊天室中是否有异常的连接。
+        /// 如果有，则移除异常的WebSocket。
+        /// </summary>
+        /// <param name="roomid"></param>
+        private static void RemoveNotOpenState(string roomid)
+        {
+            if (userdic.Count > 0 && userdic.ContainsKey(roomid)) 
+            {
+                for(int i=0;i < userdic[roomid].Count;i++)
+                {
+                     List<WebSocket> sockets = userdic[roomid];
+                    foreach (WebSocket socket in sockets)
+                    if (socket.State != WebSocketState.Open)
+                    {
+                        userdic[roomid].Remove(socket);
+                    }
+                }
+            }
+        }
         public static void AddDicUser(string roomid, WebSocket socket)
         {
             if (userdic.Count <= 200)//两百个聊天室
             {
+                RemoveNotOpenState(roomid);
                 if (!userdic.ContainsKey(roomid))
                 {
                     List<WebSocket> models = new List<WebSocket>();

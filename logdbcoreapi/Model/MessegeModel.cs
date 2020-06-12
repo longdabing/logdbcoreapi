@@ -22,7 +22,7 @@ namespace logdbcoreapi.Model
         String,
         Json,
     }
-    public class MessegeModel
+    public class MessageModel
     {
         public string RoomId { get; set; }
         public DataType DataType { get; set; }
