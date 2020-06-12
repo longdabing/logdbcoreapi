@@ -72,15 +72,18 @@ namespace logdbcoreapi.Utlis
         {
             if (userdic.Count > 0 && userdic.ContainsKey(roomid)) 
             {
-                for(int i=0;i < userdic[roomid].Count;i++)
-                {
-                     List<WebSocket> sockets = userdic[roomid];
-                    foreach (WebSocket socket in sockets)
-                    if (socket.State != WebSocketState.Open)
-                    {
-                        userdic[roomid].Remove(socket);
-                    }
-                }
+                userdic[roomid].RemoveAll(ws => (ws.State != WebSocketState.Open));
+                #region 换成上面的方法批量删除。
+                //for (int i=0;i < userdic[roomid].Count;i++)
+                //{
+                //     List<WebSocket> sockets = userdic[roomid];
+                //    foreach (WebSocket socket in sockets)
+                //    if (socket.State != WebSocketState.Open)
+                //    {
+                //        userdic[roomid].Remove(socket);
+                //    }
+                //}
+                #endregion
             }
         }
         public static void AddDicUser(string roomid, WebSocket socket)
