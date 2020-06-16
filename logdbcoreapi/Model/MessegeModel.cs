@@ -26,10 +26,10 @@ namespace logdbcoreapi.Model
     }
     public class MessageModel
     {
-        [Key]
+        [Key]//id，自增。2020.6.16
         public int Id { get; set; }
         public string RoomId { get; set; }
-        [NotMapped]
+        [NotMapped] //特殊类型不支持，所以忽略掉。
         public DataType DataType { get; set; }
         [NotMapped]
         public SendType SendType { get; set; }
