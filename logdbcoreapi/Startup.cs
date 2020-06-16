@@ -5,11 +5,13 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using logdbcoreapi.DBContext;
 using logdbcoreapi.Model;
 using logdbcoreapi.Utlis;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -31,6 +33,11 @@ namespace logdbcoreapi
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddSingleton<IWebSocket, WebSocketChat>();//注入服务
+            //2020.6.15 连接mysql
+            var connectionString = Configuration["ConnectionStrings:DefaultConnection"];
+            services.AddDbContext<MysqlDBContext>(options =>
+                options.UseMySql(connectionString)
+            );
 
             services.AddControllers();
         }

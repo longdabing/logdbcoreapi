@@ -4,6 +4,8 @@ using System.Linq;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
+using logdbcoreapi.DBContext;
+using logdbcoreapi.Model;
 using logdbcoreapi.Utlis;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -20,13 +22,15 @@ namespace logdbcoreapi.Controllers
         };
 
         private readonly ILogger<WSocketController> _logger;
-        private IWebSocket _socket;
+        private readonly IWebSocket _socket;
+        private readonly MysqlDBContext _mysqlcontext;
 
 
-        public WSocketController(ILogger<WSocketController> logger, IWebSocket webSocket)
+        public WSocketController(ILogger<WSocketController> logger, IWebSocket webSocket, MysqlDBContext mysqlcontext)
         {
             _logger = logger;
             _socket = webSocket;
+            _mysqlcontext = mysqlcontext;
             //_socket = new 
         }
 
@@ -48,6 +52,15 @@ namespace logdbcoreapi.Controllers
         {
             //if ("/ws".Equals(HttpContext.Request.Path.Value))//判断是不是websocket请求地址。
             {
+                MessageModel message = new MessageModel();
+                message.Id = 1;
+                message.RoomId = "1002";
+                message.SenderId = "1201";
+                message.TargetId = "1202";
+                message.Data = "只说代码的大饼";
+
+                _mysqlcontext.Add(message);
+                await _mysqlcontext.SaveChangesAsync();
                 if (HttpContext.WebSockets.IsWebSocketRequest)//判断是不是websocket请求。
                 {
                     _logger.LogInformation(fname);
