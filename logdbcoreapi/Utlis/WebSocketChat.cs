@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using logdbcoreapi.Model;
 using System.Text.Json;
 using JsonSerializer = System.Text.Json.JsonSerializer;
+using logdbcoreapi.DBContext;
 
 namespace logdbcoreapi.Utlis
 {
@@ -107,17 +108,6 @@ namespace logdbcoreapi.Utlis
                 if (result.Count > 0)
                 {
                     msg = JsonConvert.DeserializeObject<MessageModel>(Encoding.Default.GetString(buffer));
-                    //try
-                    //{
-                    //    var options = new JsonSerializerOptions
-                    //    {
-                    //        AllowTrailingCommas = true
-                    //    };
-                    //    msg = JsonSerializer.Deserialize<MessegeModel>(Encoding.Default.GetString(buffer), options);
-                    //}
-                    //catch (Exception ex)
-                    //{ 
-                    //}
 
                     if (msg == null)
                     {
@@ -141,16 +131,16 @@ namespace logdbcoreapi.Utlis
                     switch (msg.SendType)
                     {
                         //Broadcast all user.
-                        case Model.SendType.Broadcast:                           
-                      
-                                if (ClientList.userdic.ContainsKey(msg.RoomId))
+                        case Model.SendType.Broadcast:
+
+                            if (ClientList.userdic.ContainsKey(msg.RoomId))
+                            {
+                                ClientList.userdic[msg.RoomId].ForEach(ws =>
                                 {
-                                    ClientList.userdic[msg.RoomId].ForEach(ws =>
-                                    {
-                                        tasks.Add(ws.SendAsync(segment, result.MessageType, result.EndOfMessage, CancellationToken.None));
-                                    });
-                                    Task.WaitAll(tasks.ToArray());
-                                }           
+                                    tasks.Add(ws.SendAsync(segment, result.MessageType, result.EndOfMessage, CancellationToken.None));
+                                });
+                                Task.WaitAll(tasks.ToArray());
+                            }    
                            break;
                         //one to one.
                         case Model.SendType.Unicast:
@@ -174,6 +164,111 @@ namespace logdbcoreapi.Utlis
                 //关闭当前异常连接。
                 await socketmodel.CloseAsync(webSocket.CloseStatus.Value, webSocket.CloseStatusDescription, CancellationToken.None);
             }          
+            return "";
+        }
+
+        /// <summary>
+        /// 接收客户端数据.websocket 从ClientList类里拿。
+        /// </summary>
+        /// <param name="webSocket">webSocket 对象</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public async Task<string> ReceiveDataAsyncDataTableNew(WebSocket webSocket, CancellationToken cancellationToken, MysqlDBContext mysqlcontext)
+        {
+            WebSocketReceiveResult result;
+            MessageModel msg = null;
+            if (webSocket.State != WebSocketState.Open)
+            {
+                return "";
+            }
+
+            while (!webSocket.CloseStatus.HasValue)
+            {
+                ArraySegment<byte> buffer = new ArraySegment<byte>(new byte[1024 * 2]);
+                result = await webSocket.ReceiveAsync(buffer, cancellationToken);
+                if (result.MessageType == WebSocketMessageType.Close)
+                {
+                    break;
+                }
+                ArraySegment<byte> segment=null;
+                if (result.Count > 0)
+                {
+                    try
+                    {
+                        msg = JsonConvert.DeserializeObject<MessageModel>(Encoding.Default.GetString(buffer));
+
+                        if (msg == null)
+                        {
+                            break;
+                        }
+                        //这个只是发送了部分数据出去。
+                        byte[] newbuf = Encoding.UTF8.GetBytes(msg.Data.ToString());//过度下，按实际大小返回给客户端。
+                        segment = new ArraySegment<byte>(newbuf);
+
+                        ClientList.AddDicUser(msg.RoomId + msg.SenderId, webSocket);
+
+                        MessageModel message = new MessageModel();
+                        //message.Id = 2;//id
+                        message.RoomId = msg.RoomId;
+                        message.SenderId = msg.SenderId;
+                        message.TargetId = msg.TargetId;
+                        message.Data = msg.Data;
+
+
+                        mysqlcontext.Add(message);
+                        mysqlcontext.SaveChanges();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex.Message);
+                    }
+
+                    List<Task> tasks = new List<Task>();
+                    switch (msg.SendType)
+                    {
+                        //Broadcast all user.
+                        case Model.SendType.Broadcast:
+
+                            if (ClientList.userdic.ContainsKey(msg.RoomId))
+                            {
+                                ClientList.userdic[msg.RoomId].ForEach(ws =>
+                                {
+                                    tasks.Add(ws.SendAsync(segment, result.MessageType, result.EndOfMessage, CancellationToken.None));
+                                });
+                                Task.WaitAll(tasks.ToArray());
+                            }
+                            else if (ClientList.userdic.ContainsKey(msg.RoomId + msg.SenderId))
+                            { //added by longdb 2020.6.17 Get offline information。
+                                List<MessageModel> mmodel2 = mysqlcontext.Set<MessageModel>().Where(p=>p.SenderId==msg.SenderId).ToList();
+                                ClientList.userdic[msg.RoomId + msg.SenderId].ForEach(ws =>
+                                {
+                                    tasks.Add(ws.SendAsync(segment, result.MessageType, result.EndOfMessage, CancellationToken.None));
+                                });
+                                Task.WaitAll(tasks.ToArray());
+                            }
+                            break;
+                        //one to one.
+                        case Model.SendType.Unicast:
+                            if (ClientList.userdic.ContainsKey(msg.RoomId)
+                                && ClientList.userdic[msg.RoomId].Count > 0)
+                            {
+                                WebSocket siglews = ClientList.userdic[msg.RoomId].Where(ws => ws == webSocket).FirstOrDefault();
+                                tasks.Add(siglews.SendAsync(segment, result.MessageType, result.EndOfMessage, CancellationToken.None));
+                                Task.WaitAll(tasks.ToArray());
+                            }
+                            break;
+                    }
+                }
+            }
+
+            if (msg != null && ClientList.userdic.ContainsKey(msg.RoomId))
+            {
+                WebSocket socketmodel = ClientList.userdic[msg.RoomId].Where(ws => ws == webSocket).FirstOrDefault();
+                //移除聊天室中的某个成员
+                ClientList.RemoveDicUser(msg.RoomId, socketmodel);
+                //关闭当前异常连接。
+                await socketmodel.CloseAsync(webSocket.CloseStatus.Value, webSocket.CloseStatusDescription, CancellationToken.None);
+            }
             return "";
         }
 

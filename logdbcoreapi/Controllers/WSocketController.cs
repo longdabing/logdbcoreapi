@@ -52,32 +52,13 @@ namespace logdbcoreapi.Controllers
         {
             //if ("/ws".Equals(HttpContext.Request.Path.Value))//判断是不是websocket请求地址。
             {
-                MessageModel message = new MessageModel();
-                //message.Id = 2;//id
-                message.RoomId = "1002";
-                message.SenderId = "1201";
-                message.TargetId = "1202";
-                message.Data = "只说代码的大饼";
-
-                try
-                {
-                    _mysqlcontext.Add(message);
-                    _mysqlcontext.SaveChanges();
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex.Message);
-                }
-
                 if (HttpContext.WebSockets.IsWebSocketRequest)//判断是不是websocket请求。
                 {
                     _logger.LogInformation(fname);
                   
                     WebSocket webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
-                    //ClientList.AddUser(webSocket);
-                    //_socket.CreateSocket(HttpContext);
-                  await  _socket.ReceiveDataAsyncNew(webSocket, new CancellationToken(false));
-                    //_socket.SendDataAsync("I am longdb", webSocket);
+                    await _socket.ReceiveDataAsyncDataTableNew(webSocket, new CancellationToken(false), _mysqlcontext);
+                    //await  _socket.ReceiveDataAsyncNew(webSocket, new CancellationToken(false));
                 }
             }
         }
